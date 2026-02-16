@@ -3,8 +3,8 @@ import './globals.css';
 import { ToastProvider } from '@/components/ui/toast';
 
 export const metadata: Metadata = {
-  title: 'Escola do Empreendedor Raiz',
-  description: 'Plataforma educacional para empreendedores',
+  title: 'Campus Online',
+  description: 'Plataforma de escolas digitais — cursos, aulas e área de membros.',
 };
 
 export default function RootLayout({

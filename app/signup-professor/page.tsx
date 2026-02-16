@@ -4,6 +4,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
+import { Input } from '@/components/ui';
+
+import BrandLogo from '@/components/BrandLogo';
 
 export default function SignupProfessorPage() {
   const router = useRouter();
@@ -73,73 +76,59 @@ export default function SignupProfessorPage() {
       </div>
 
       <div className="w-full max-w-lg animate-in fade-in zoom-in-95 duration-700 relative z-10">
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-600 mb-6 shadow-2xl shadow-indigo-500/20 font-bold text-3xl text-white">
-            P
-          </div>
+        <div className="flex flex-col items-center mb-10 text-center">
+          <BrandLogo size="lg" className="mb-6 scale-125" />
           <h1 className="text-3xl font-extrabold text-white tracking-tight">Comece sua Jornada</h1>
-          <p className="text-slate-400 mt-2">Crie sua conta de instrutor e compartilhe seu conhecimento.</p>
+          <p className="text-slate-400 mt-2">Crie sua conta de instrutor no Campus Online.</p>
         </div>
 
         <div className="bg-slate-900/40 border border-slate-800 p-8 md:p-10 rounded-[2.5rem] backdrop-blur-xl shadow-3xl">
           {error && (
             <div className={`mb-6 p-4 rounded-xl text-sm ${error.includes('Cadastro realizado')
-                ? 'bg-emerald-500/20 border border-emerald-500/50 text-emerald-200'
-                : 'bg-red-500/20 border border-red-400 text-red-200'
+              ? 'bg-emerald-500/20 border border-emerald-500/50 text-emerald-200'
+              : 'bg-red-500/20 border border-red-400 text-red-200'
               }`}>
               {error}
             </div>
           )}
           <form onSubmit={handleSignup} className="space-y-5">
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-300 ml-1">Nome Completo</label>
-              <input
-                type="text"
-                placeholder="Ex: João Silva"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-5 py-3.5 bg-slate-950/50 border border-slate-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600 transition-all"
-                required
-              />
-            </div>
+            <Input
+              label="Nome Completo"
+              type="text"
+              placeholder="Ex: João Silva"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+            />
 
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-300 ml-1">E-mail</label>
-              <input
-                type="email"
-                placeholder="nome@exemplo.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-5 py-3.5 bg-slate-950/50 border border-slate-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600 transition-all"
-                required
-              />
-            </div>
+            <Input
+              label="E-mail"
+              type="email"
+              placeholder="nome@exemplo.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-300 ml-1">Senha</label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-5 py-3.5 bg-slate-950/50 border border-slate-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600 transition-all font-mono"
-                  required
-                  minLength={6}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-300 ml-1">Confirmar Senha</label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-5 py-3.5 bg-slate-950/50 border border-slate-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-white placeholder:text-slate-600 transition-all font-mono"
-                  required
-                  minLength={6}
-                />
-              </div>
+              <Input
+                label="Senha"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+              />
+              <Input
+                label="Confirmar Senha"
+                type="password"
+                placeholder="••••••••"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={6}
+              />
             </div>
 
             <div className="flex items-center gap-3 py-2 px-1">
@@ -185,7 +174,7 @@ export default function SignupProfessorPage() {
         </div>
 
         <p className="mt-10 text-center text-slate-600 text-[10px] tracking-widest uppercase italic">
-          Powering the next generation of online educators
+          Campus Online — Powering the next generation of educators
         </p>
       </div>
     </div>

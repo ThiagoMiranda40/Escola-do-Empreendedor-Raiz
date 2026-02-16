@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
+import BrandLogo from '@/components/BrandLogo';
 
 export default function TeacherLayout({
   children,
@@ -93,12 +94,11 @@ export default function TeacherLayout({
         className={`hidden md:flex ${sidebarOpen ? 'w-64' : 'w-20'
           } border-r border-slate-800/50 bg-[#020617] transition-all duration-300 flex-col z-30 shadow-2xl`}
       >
-        <div className="p-6 border-b border-slate-800/50 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center font-bold text-lg shadow-lg shadow-blue-500/20 text-white">
-            E
-          </div>
-          {sidebarOpen && (
-            <span className="font-bold tracking-tight text-xl text-white">Escola Raiz</span>
+        <div className="p-6 border-b border-slate-800/50 flex items-center h-[73px]">
+          {sidebarOpen ? (
+            <BrandLogo size="md" />
+          ) : (
+            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white mx-auto shadow-lg shadow-blue-500/20">C</div>
           )}
         </div>
 
@@ -139,11 +139,8 @@ export default function TeacherLayout({
         className={`fixed top-0 bottom-0 left-0 w-72 bg-[#020617] border-r border-slate-800 z-50 transition-transform duration-300 md:hidden ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
       >
-        <div className="p-6 border-b border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white">E</div>
-            <span className="font-bold text-lg text-white">Escola Raiz</span>
-          </div>
+        <div className="p-6 border-b border-slate-800 flex items-center justify-between h-[73px]">
+          <BrandLogo size="md" />
           <button
             onClick={() => setIsMobileMenuOpen(false)}
             className="text-slate-400 hover:text-white"

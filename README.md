@@ -1,4 +1,4 @@
-# Escola do Empreendedor Raiz - Supabase Edition
+# Campus Online - Supabase Edition
 
 Plataforma educacional moderna construída com **Next.js 14**, **Supabase Auth**, **Postgres** e **RLS (Row Level Security)**.
 

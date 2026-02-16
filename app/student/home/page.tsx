@@ -62,7 +62,7 @@ export default function StudentHomePage() {
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-8">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-4xl font-bold mb-2">Escola do Empreendedor Raiz</h1>
+          <h1 className="text-4xl font-bold mb-2">Campus Online</h1>
           <p className="text-blue-100">Aprenda com os melhores cursos</p>
         </div>
       </div>

@@ -1,4 +1,4 @@
-# Documentação - Escola do Empreendedor Raiz
+# Documentação - Campus Online
 
 ## 🚀 Como Usar a Plataforma
 

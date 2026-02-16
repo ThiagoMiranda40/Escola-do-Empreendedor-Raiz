@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase-client';
 import Link from 'next/link';
+import { Input } from '@/components/ui';
+import BrandLogo from '@/components/BrandLogo';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -45,12 +46,10 @@ export default function LoginPage() {
             </div>
 
             <div className="w-full max-w-md animate-in fade-in zoom-in-95 duration-700">
-                <div className="text-center mb-10">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 mb-6 shadow-2xl shadow-blue-500/20 font-bold text-3xl text-white">
-                        M
-                    </div>
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Painel do Mestre</h1>
-                    <p className="text-slate-400 mt-2">Acesse a gestão da sua escola de empreendedores.</p>
+                <div className="flex flex-col items-center mb-10">
+                    <BrandLogo size="lg" className="mb-6 scale-125" />
+                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Portal do Professor</h1>
+                    <p className="text-slate-400 mt-2">Gestão simplificada do seu Campus.</p>
                 </div>
 
                 <div className="bg-slate-900/40 border border-slate-800 p-8 rounded-[2rem] backdrop-blur-xl shadow-3xl">
@@ -60,28 +59,24 @@ export default function LoginPage() {
                         </div>
                     )}
                     <form onSubmit={handleLogin} className="space-y-5">
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold text-slate-300 ml-1">E-mail de Acesso</label>
-                            <input
-                                type="email"
-                                placeholder="seu-email@escola.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="w-full px-5 py-3.5 bg-slate-950/50 border border-slate-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white placeholder:text-slate-600 transition-all font-sans"
-                                required
-                            />
-                        </div>
-                        <div className="space-y-2">
+                        <Input
+                            label="E-mail de Acesso"
+                            type="email"
+                            placeholder="seu-email@escola.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                        />
+                        <div className="space-y-1.5">
                             <div className="flex justify-between items-center ml-1">
                                 <label className="text-sm font-semibold text-slate-300">Senha Secreta</label>
                                 <a href="#" className="text-xs text-blue-500 hover:text-blue-400 font-medium tracking-tight">Recuperar acesso</a>
                             </div>
-                            <input
+                            <Input
                                 type="password"
                                 placeholder="••••••••"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-5 py-3.5 bg-slate-950/50 border border-slate-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white placeholder:text-slate-600 transition-all"
                                 required
                             />
                         </div>
@@ -114,7 +109,7 @@ export default function LoginPage() {
                 </div>
 
                 <p className="mt-10 text-center text-slate-600 text-xs tracking-widest uppercase">
-                    © 2026 Escola do Empreendedor Raiz
+                    © 2026 Campus Online
                 </p>
             </div>
         </div>

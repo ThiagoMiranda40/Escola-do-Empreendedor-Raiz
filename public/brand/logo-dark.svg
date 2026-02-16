@@ -1,0 +1,7 @@
+<svg width="200" height="50" viewBox="0 0 200 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="40" height="40" rx="12" fill="#3B82F6" />
+  <path d="M12 20L20 12L28 20L20 28L12 20Z" fill="white" />
+  <circle cx="20" cy="20" r="4" fill="white" fill-opacity="0.3" />
+  <text x="50" y="32" font-family="Arial, sans-serif" font-weight="900" font-size="24" fill="white">Campus</text>
+  <text x="140" y="32" font-family="Arial, sans-serif" font-weight="400" font-size="24" fill="#94A3B8">Online</text>
+</svg>
