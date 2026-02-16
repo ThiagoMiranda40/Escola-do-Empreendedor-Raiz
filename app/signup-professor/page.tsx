@@ -83,7 +83,10 @@ export default function SignupProfessorPage() {
 
         <div className="bg-slate-900/40 border border-slate-800 p-8 md:p-10 rounded-[2.5rem] backdrop-blur-xl shadow-3xl">
           {error && (
-            <div className="mb-6 p-4 bg-red-500/20 border border-red-400 rounded-xl text-red-200 text-sm">
+            <div className={`mb-6 p-4 rounded-xl text-sm ${error.includes('Cadastro realizado')
+                ? 'bg-emerald-500/20 border border-emerald-500/50 text-emerald-200'
+                : 'bg-red-500/20 border border-red-400 text-red-200'
+              }`}>
               {error}
             </div>
           )}

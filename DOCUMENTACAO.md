@@ -91,6 +91,47 @@
 
 ---
 
+## 📂 Backoffice do Professor
+O Backoffice foi evoluído para suportar o gerenciamento completo de Categorias e Cursos com uma UI premium e responsiva.
+
+### Rotas do Backoffice
+- `/teacher/dashboard`: Resumo geral e estatísticas.
+- `/teacher/categories`: CRUD completo de categorias.
+- `/teacher/courses`: Lista de cursos com filtros.
+- `/teacher/courses/new`: Formulário de criação de curso.
+- `/teacher/courses/[id]`: Dashboard de gerenciamento do curso.
+- `/teacher/courses/[id]/edit`: Edição de informações básicas.
+
+### 🛠️ Configuração Inicial (Database & Storage)
+Se você está configurando o projeto agora, execute o SQL contido em:
+`supabase/migrations/20260216_teacher_crud.sql`
+
+Este script realiza:
+1. Adição da coluna `slug` na tabela `course`.
+2. Criação do bucket `course-thumbnails` no Supabase Storage.
+3. Configuração de políticas de segurança (RLS) para o bucket.
+
+### 🖼️ Supabase Storage
+Para que o upload de thumbnails funcione:
+1. Vá em **Storage** no painel do Supabase.
+2. Certifique-se de que o bucket `course-thumbnails` existe e está marcado como **Public**.
+3. As políticas RLS devem permitir:
+   - `SELECT`: Público (`anon`)
+   - `INSERT`: Apenas professores autenticados
+
+### 🧪 Como Testar o Backoffice
+1. **Login**: Entre como professor (role `TEACHER`).
+2. **Categorias**: Acesse `/teacher/categories`, crie uma categoria e veja a lista atualizar. Tente editar e excluir.
+3. **Cursos**:
+   - Acesse `/teacher/courses` e clique em "Criar Novo Curso".
+   - Preencha o formulário, selecione a categoria criada anteriormente.
+   - Faça upload de uma imagem (thumbnail).
+   - Salve e veja o curso aparecer no grid.
+   - Use o botão "Publicar" (🚀) para alternar o status.
+   - Entre em "Gerenciar" para ver o dashboard específico do curso.
+
+---
+
 ## 📊 Estrutura de Dados
 
 ### Tabelas Principais
@@ -194,24 +235,21 @@ Todas as tabelas têm políticas RLS ativadas:
 
 ## 🚀 Próximos Passos
 
-- [ ] Adicionar sistema de comentários
-- [ ] Implementar sistema de progresso do aluno
-- [ ] Adicionar gamificação (XP, badges)
-- [ ] Sistema de notificações por email
-- [ ] Upload de materiais complementares
-- [ ] Certificados de conclusão
-- [ ] Analytics e relatórios
+- [x] CRUD de Categorias e Cursos
+- [x] Upload de Thumbnails (Supabase Storage)
+- [ ] CRUD de Módulos (Editor de Currículo)
+- [ ] CRUD de Aulas e Integração Panda Video
+- [ ] Sistema de comentários
+- [ ] Analytics de Alunos
 
 ---
 
 ## 📞 Suporte
-
-Para dúvidas ou problemas:
-1. Verifique se o SQL foi executado no Supabase
-2. Verifique as credenciais em `.env.local`
-3. Teste as políticas RLS no Supabase Dashboard
+Para dúvidas sobre as novas funcionalidades do CRUD:
+- Verifique se o bucket `course-thumbnails` foi criado corretamente.
+- Certifique-se de que as permissões de Storage estão configuradas (usar a migration sugerida).
 
 ---
 
-**Versão**: 1.0.0  
-**Última atualização**: Fevereiro 2026
+**Versão**: 1.1.0  
+**Última atualização**: 16 de Fevereiro de 2026

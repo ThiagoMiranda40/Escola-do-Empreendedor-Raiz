@@ -1,21 +1,28 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase-client';
+import { Button, Input, TextArea } from '@/components/ui';
+import { useToast } from '@/components/ui/toast';
 
 interface Category {
   id: string;
   name: string;
   slug: string;
-  sort_order: number;
+  description?: string;
 }
 
 export default function CategoriesPage() {
+  const supabase = createClient();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({ name: '', slug: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({ name: '', slug: '', description: '' });
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+
+  const { showToast } = useToast();
 
   useEffect(() => {
     loadCategories();
@@ -26,12 +33,13 @@ export default function CategoriesPage() {
       const { data, error } = await supabase
         .from('category')
         .select('*')
-        .order('sort_order', { ascending: true });
+        .order('name', { ascending: true });
 
       if (error) throw error;
       setCategories(data || []);
     } catch (error) {
       console.error('Erro ao carregar categorias:', error);
+      showToast('Erro ao carregar categorias', 'error');
     } finally {
       setLoading(false);
     }
@@ -50,48 +58,65 @@ export default function CategoriesPage() {
     e.preventDefault();
 
     if (!formData.name) {
-      alert('Nome é obrigatório');
+      showToast('Nome é obrigatório', 'error');
       return;
     }
 
+    setIsSubmitting(true);
     const slug = formData.slug || generateSlug(formData.name);
 
     try {
       if (editingId) {
-        // Atualizar
         const { error } = await supabase
           .from('category')
-          .update({ name: formData.name, slug })
+          .update({
+            name: formData.name,
+            slug,
+            description: formData.description
+          })
           .eq('id', editingId);
 
         if (error) throw error;
+        showToast('Categoria atualizada com sucesso!');
       } else {
-        // Criar
         const { error } = await supabase
           .from('category')
-          .insert([{ name: formData.name, slug }]);
+          .insert([{
+            name: formData.name,
+            slug,
+            description: formData.description
+          }]);
 
         if (error) throw error;
+        showToast('Categoria criada com sucesso!');
       }
 
-      setFormData({ name: '', slug: '' });
+      setFormData({ name: '', slug: '', description: '' });
       setEditingId(null);
       setShowForm(false);
       loadCategories();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao salvar categoria:', error);
-      alert('Erro ao salvar categoria');
+      showToast(error.message || 'Erro ao salvar categoria', 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleEdit = (category: Category) => {
-    setFormData({ name: category.name, slug: category.slug });
+    setFormData({
+      name: category.name,
+      slug: category.slug,
+      description: category.description || ''
+    });
     setEditingId(category.id);
     setShowForm(true);
+    // Scroll para o topo para ver o formulário
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja deletar esta categoria?')) return;
+    if (!confirm('Tem certeza que deseja deletar esta categoria? Todos os cursos associados poderão ser afetados.')) return;
 
     try {
       const { error } = await supabase
@@ -100,21 +125,36 @@ export default function CategoriesPage() {
         .eq('id', id);
 
       if (error) throw error;
+      showToast('Categoria excluída!');
       loadCategories();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao deletar categoria:', error);
-      alert('Erro ao deletar categoria');
+      showToast(error.message || 'Erro ao deletar categoria', 'error');
     }
   };
 
   const handleCancel = () => {
-    setFormData({ name: '', slug: '' });
+    setFormData({ name: '', slug: '', description: '' });
     setEditingId(null);
     setShowForm(false);
   };
 
+  const filteredCategories = categories.filter(c =>
+    c.name.toLowerCase().includes(search.toLowerCase()) ||
+    c.slug.toLowerCase().includes(search.toLowerCase())
+  );
+
   if (loading) {
-    return <div>Carregando...</div>;
+    return (
+      <div className="space-y-6">
+        <div className="h-10 w-48 bg-slate-800 rounded animate-pulse"></div>
+        <div className="grid grid-cols-1 gap-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-20 bg-slate-900/50 rounded-2xl border border-slate-800 animate-pulse"></div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -125,29 +165,26 @@ export default function CategoriesPage() {
           <h1 className="text-4xl font-extrabold text-white tracking-tight">Categorias</h1>
           <p className="text-slate-400 mt-1">Organize seus cursos por tópicos e facilite a busca dos alunos.</p>
         </div>
-        <button
+        <Button
           onClick={() => setShowForm(!showForm)}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold transition-all duration-300 ${showForm
-              ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-              : 'bg-blue-600 text-white hover:bg-blue-500 shadow-lg shadow-blue-500/20 active:scale-95'
-            }`}
+          variant={showForm ? 'secondary' : 'primary'}
+          className="rounded-full"
         >
           {showForm ? '✕ Cancelar' : '＋ Nova Categoria'}
-        </button>
+        </Button>
       </div>
 
       {/* Form Section */}
       {showForm && (
-        <div className="bg-slate-900/50 border border-slate-800 p-8 rounded-2xl backdrop-blur-sm animate-in zoom-in-95 duration-300">
+        <div className="bg-slate-900/50 border border-slate-800 p-8 rounded-[2rem] backdrop-blur-sm animate-in zoom-in-95 duration-300 shadow-2xl">
           <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
             <span className="w-2 h-6 bg-blue-500 rounded-full inline-block"></span>
             {editingId ? 'Editar Categoria' : 'Informações da Categoria'}
           </h2>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300 ml-1">Nome da Categoria</label>
-              <input
-                type="text"
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Input
+                label="Nome da Categoria"
                 value={formData.name}
                 onChange={(e) => {
                   setFormData({ ...formData, name: e.target.value });
@@ -158,96 +195,105 @@ export default function CategoriesPage() {
                     }));
                   }
                 }}
-                className="w-full px-5 py-3 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all text-white placeholder:text-slate-600"
                 placeholder="Ex: Marketing Digital"
                 required
               />
-            </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-300 ml-1 hover:text-blue-400 cursor-help transition-colors" title="Identificador único para a URL">URL Slug (amigável)</label>
-              <input
-                type="text"
+              <Input
+                label="URL Slug (amigável)"
                 value={formData.slug}
                 onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                className="w-full px-5 py-3 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all text-white font-mono text-sm tracking-tight"
                 placeholder="marketing-digital"
+                className="font-mono"
+                helperText="Identificador único para a URL"
               />
             </div>
 
-            <div className="md:col-span-2 flex justify-end gap-3 mt-4 border-t border-slate-800 pt-6">
-              <button
-                type="button"
-                onClick={handleCancel}
-                className="px-6 py-2.5 bg-transparent border border-slate-800 text-slate-400 rounded-xl hover:bg-slate-800 hover:text-white transition-all font-medium"
-              >
+            <TextArea
+              label="Descrição (opcional)"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Descreva brevemente o que os alunos encontrarão nesta categoria..."
+            />
+
+            <div className="flex justify-end gap-3 pt-6 border-t border-slate-800">
+              <Button type="button" variant="ghost" onClick={handleCancel}>
                 Descartar
-              </button>
-              <button
-                type="submit"
-                className="px-8 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-500 transition-all font-bold shadow-lg shadow-blue-500/10 active:scale-95"
-              >
+              </Button>
+              <Button type="submit" loading={isSubmitting}>
                 {editingId ? 'Salvar Alterações' : 'Criar Categoria'}
-              </button>
+              </Button>
             </div>
           </form>
         </div>
       )}
 
+      {/* List Search */}
+      <div className="relative">
+        <Input
+          placeholder="Buscar categorias..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="pl-12 bg-slate-900/30 border-slate-800/50 rounded-2xl"
+        />
+        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl opacity-40">🔍</span>
+      </div>
+
       {/* List Section */}
-      <div className="bg-slate-900/30 border border-slate-800/50 rounded-2xl overflow-hidden shadow-sm backdrop-blur-md">
-        {categories.length === 0 ? (
+      <div className="bg-slate-900/30 border border-slate-800/50 rounded-3xl overflow-hidden shadow-sm backdrop-blur-md">
+        {filteredCategories.length === 0 ? (
           <div className="p-20 text-center space-y-4">
             <div className="mx-auto w-16 h-16 bg-slate-800/50 rounded-2xl flex items-center justify-center text-3xl opacity-50 mb-4">📂</div>
-            <h3 className="text-xl font-semibold text-slate-300">Sua lista está vazia</h3>
-            <p className="text-slate-500 max-w-xs mx-auto text-sm">Crie sua primeira categoria para começar a organizar seus cursos e materiais.</p>
-            <button
-              onClick={() => setShowForm(true)}
-              className="text-blue-500 hover:text-blue-400 font-medium text-sm underline underline-offset-4"
-            >
-              Começar agora
-            </button>
+            <h3 className="text-xl font-semibold text-slate-300">Nenhuma categoria encontrada</h3>
+            <p className="text-slate-500 max-w-xs mx-auto text-sm">Tente outro termo de busca ou crie uma nova categoria.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-800/20 border-b border-slate-800">
-                  <th className="px-8 py-5 text-sm font-semibold text-slate-400 uppercase tracking-wider uppercase">Nome</th>
-                  <th className="px-8 py-5 text-sm font-semibold text-slate-400 uppercase tracking-wider uppercase">Slug</th>
-                  <th className="px-8 py-5 text-right text-sm font-semibold text-slate-400 uppercase tracking-wider uppercase">Ações</th>
+                  <th className="px-8 py-5 text-xs font-bold text-slate-500 uppercase tracking-widest">Nome</th>
+                  <th className="px-8 py-5 text-xs font-bold text-slate-500 uppercase tracking-widest hidden md:table-cell">Slug</th>
+                  <th className="px-8 py-5 text-right text-xs font-bold text-slate-500 uppercase tracking-widest">Ações</th>
                 </tr>
               </thead>
               <tbody>
-                {categories.map((category) => (
+                {filteredCategories.map((category) => (
                   <tr key={category.id} className="group border-b border-slate-800/50 hover:bg-white/[0.02] transition-colors">
                     <td className="px-8 py-5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 font-bold group-hover:scale-110 transition-transform">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/10 flex items-center justify-center text-blue-400 font-bold group-hover:scale-110 transition-transform">
                           {category.name.charAt(0)}
                         </div>
-                        <span className="font-semibold text-slate-100">{category.name}</span>
+                        <div>
+                          <span className="font-bold text-slate-100 block">{category.name}</span>
+                          {category.description && (
+                            <span className="text-xs text-slate-500 line-clamp-1">{category.description}</span>
+                          )}
+                        </div>
                       </div>
                     </td>
-                    <td className="px-8 py-5">
-                      <code className="text-xs bg-slate-800 text-slate-400 px-2 py-1 rounded-md font-mono">{category.slug}</code>
+                    <td className="px-8 py-5 hidden md:table-cell">
+                      <code className="text-[10px] bg-slate-800 border border-slate-700 text-slate-400 px-2 py-1 rounded-lg font-mono tracking-tight">{category.slug}</code>
                     </td>
                     <td className="px-8 py-5 text-right">
                       <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleEdit(category)}
-                          className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all"
-                          title="Editar"
+                          className="bg-emerald-500/5 text-emerald-500 hover:bg-emerald-500 hover:text-white"
                         >
                           ✏️
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleDelete(category.id)}
-                          className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all"
-                          title="Excluir"
+                          className="bg-red-500/5 text-red-500 hover:bg-red-500 hover:text-white"
                         >
                           🗑️
-                        </button>
+                        </Button>
                       </div>
                     </td>
                   </tr>

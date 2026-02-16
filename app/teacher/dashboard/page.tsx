@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase-client';
 
 interface Stats {
   totalCourses: number;
@@ -12,6 +12,7 @@ interface Stats {
 }
 
 export default function TeacherDashboard() {
+  const supabase = createClient();
   const [stats, setStats] = useState<Stats>({
     totalCourses: 0,
     publishedCourses: 0,

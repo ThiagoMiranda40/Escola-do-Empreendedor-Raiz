@@ -10,7 +10,6 @@ export default function LoginPage() {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const router = useRouter();
     const supabase = createClient();
 
     const handleLogin = async (e: React.FormEvent) => {
@@ -29,9 +28,8 @@ export default function LoginPage() {
                 return;
             }
 
-            // Forçar refresh para garantir que os cookies de sessão sejam lidos pelo middleware
-            router.refresh();
-            router.push('/teacher/dashboard');
+            // Forçar redirecionamento direto
+            window.location.href = '/teacher/dashboard';
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -43,16 +41,16 @@ export default function LoginPage() {
         <div className="min-h-screen bg-[#020617] flex items-center justify-center p-4 selection:bg-blue-500/30">
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-1/4 -left-20 w-80 h-80 bg-blue-600/10 rounded-full blur-[120px]"></div>
-                <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-emerald-600/10 rounded-full blur-[120px]"></div>
+                <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-indigo-600/10 rounded-full blur-[120px]"></div>
             </div>
 
             <div className="w-full max-w-md animate-in fade-in zoom-in-95 duration-700">
                 <div className="text-center mb-10">
                     <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-600 mb-6 shadow-2xl shadow-blue-500/20 font-bold text-3xl text-white">
-                        E
+                        M
                     </div>
-                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Bem-vindo de volta</h1>
-                    <p className="text-slate-400 mt-2">Acesse sua conta para gerenciar seus cursos.</p>
+                    <h1 className="text-3xl font-extrabold text-white tracking-tight">Painel do Mestre</h1>
+                    <p className="text-slate-400 mt-2">Acesse a gestão da sua escola de empreendedores.</p>
                 </div>
 
                 <div className="bg-slate-900/40 border border-slate-800 p-8 rounded-[2rem] backdrop-blur-xl shadow-3xl">
@@ -63,10 +61,10 @@ export default function LoginPage() {
                     )}
                     <form onSubmit={handleLogin} className="space-y-5">
                         <div className="space-y-2">
-                            <label className="text-sm font-semibold text-slate-300 ml-1">E-mail</label>
+                            <label className="text-sm font-semibold text-slate-300 ml-1">E-mail de Acesso</label>
                             <input
                                 type="email"
-                                placeholder="exemplo@gmail.com"
+                                placeholder="seu-email@escola.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="w-full px-5 py-3.5 bg-slate-950/50 border border-slate-800 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white placeholder:text-slate-600 transition-all font-sans"
@@ -75,8 +73,8 @@ export default function LoginPage() {
                         </div>
                         <div className="space-y-2">
                             <div className="flex justify-between items-center ml-1">
-                                <label className="text-sm font-semibold text-slate-300">Senha</label>
-                                <a href="#" className="text-xs text-blue-500 hover:text-blue-400 font-medium">Esqueceu a senha?</a>
+                                <label className="text-sm font-semibold text-slate-300">Senha Secreta</label>
+                                <a href="#" className="text-xs text-blue-500 hover:text-blue-400 font-medium tracking-tight">Recuperar acesso</a>
                             </div>
                             <input
                                 type="password"
@@ -96,20 +94,20 @@ export default function LoginPage() {
                             {loading ? (
                                 <span className="flex items-center justify-center gap-2">
                                     <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                                    Autenticando...
+                                    Validando credenciais...
                                 </span>
-                            ) : 'Entrar no Painel'}
+                            ) : 'Acessar Área do Professor'}
                         </button>
                     </form>
 
                     <div className="mt-8 pt-6 border-t border-slate-800/50 text-center">
                         <p className="text-slate-500 text-sm">
-                            Ainda não é um instrutor?{' '}
+                            Ainda não tem acesso?{' '}
                             <Link
                                 href="/signup-professor"
                                 className="text-white font-bold hover:text-blue-400 transition-colors underline underline-offset-4"
                             >
-                                Criar conta de professor
+                                Criar conta de gestão
                             </Link>
                         </p>
                     </div>
