@@ -5,19 +5,24 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { Button, Badge } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
+import { useSchool } from '@/lib/school-context-provider';
 
 export default function ManageCoursePage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
+    const { school, loading: schoolLoading } = useSchool();
     const [course, setCourse] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('overview');
     const { showToast } = useToast();
 
     useEffect(() => {
-        loadCourse();
-    }, [id]);
+        if (!schoolLoading && school) {
+            loadCourse();
+        }
+    }, [id, school, schoolLoading]);
 
     const loadCourse = async () => {
+        if (!school) return;
         const { data } = await supabase
             .from('course')
             .select(`
@@ -25,6 +30,7 @@ export default function ManageCoursePage({ params }: { params: Promise<{ id: str
         category ( name )
       `)
             .eq('id', id)
+            .eq('school_id', school.id)
             .single();
 
         if (data) setCourse(data);
@@ -32,12 +38,14 @@ export default function ManageCoursePage({ params }: { params: Promise<{ id: str
     };
 
     const handleToggleStatus = async () => {
+        if (!school) return;
         const newStatus = course.status === 'draft' ? 'published' : 'draft';
         try {
             const { error } = await supabase
                 .from('course')
                 .update({ status: newStatus })
-                .eq('id', id);
+                .eq('id', id)
+                .eq('school_id', school.id); // Ensure scoping
 
             if (error) throw error;
             showToast(`Curso ${newStatus === 'published' ? 'publicado' : 'movido para rascunho'}!`);

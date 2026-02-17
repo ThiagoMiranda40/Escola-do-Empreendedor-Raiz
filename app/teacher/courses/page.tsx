@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
 import { Button, Input, Select, Badge } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
+import { useSchool } from '@/lib/school-context-provider';
 
 interface Course {
     id: string;
@@ -19,6 +20,7 @@ interface Course {
 
 export default function CoursesPage() {
     const supabase = createClient();
+    const { school, loading: schoolLoading } = useSchool();
     const [courses, setCourses] = useState<Course[]>([]);
     const [categories, setCategories] = useState<{ id: string, name: string }[]>([]);
     const [loading, setLoading] = useState(true);
@@ -29,18 +31,21 @@ export default function CoursesPage() {
     const { showToast } = useToast();
 
     useEffect(() => {
-        loadData();
-    }, []);
+        if (!schoolLoading && school) {
+            loadData();
+        }
+    }, [school, schoolLoading]);
 
     const loadData = async () => {
         try {
             const { data: { session } } = await supabase.auth.getSession();
-            if (!session) return;
+            if (!session || !school) return;
 
             // Load Categories for filter
             const { data: catData } = await supabase
                 .from('category')
                 .select('id, name')
+                .eq('school_id', school.id)
                 .order('name');
             setCategories(catData || []);
 
@@ -52,6 +57,7 @@ export default function CoursesPage() {
           category ( name )
         `)
                 .eq('teacher_id', session.user.id)
+                .eq('school_id', school.id)
                 .order('created_at', { ascending: false });
 
             if (error) throw error;

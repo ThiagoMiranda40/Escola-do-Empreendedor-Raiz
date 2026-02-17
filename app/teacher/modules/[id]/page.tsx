@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { useSchool } from '@/lib/school-context-provider';
 
 interface Lesson {
   id: string;
@@ -24,6 +25,7 @@ export default function ModuleEditPage() {
   const router = useRouter();
   const params = useParams();
   const moduleId = params.id as string;
+  const { school, loading: schoolLoading } = useSchool();
 
   const [module, setModule] = useState<Module | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>([]);
@@ -37,10 +39,13 @@ export default function ModuleEditPage() {
   const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadModule();
-  }, []);
+    if (!schoolLoading && school) {
+      loadModule();
+    }
+  }, [school, schoolLoading]);
 
   const loadModule = async () => {
+    if (!school) return;
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
@@ -53,6 +58,7 @@ export default function ModuleEditPage() {
           course:course_id (teacher_id)
         `)
         .eq('id', moduleId)
+        .eq('school_id', school.id) // Ensure scoping
         .single();
 
       if (moduleError) throw moduleError;
@@ -70,6 +76,7 @@ export default function ModuleEditPage() {
         .from('lesson')
         .select('*')
         .eq('module_id', moduleId)
+        .eq('school_id', school.id) // Ensure scoping
         .order('sort_order');
 
       setLessons(lessonsData || []);
@@ -83,6 +90,10 @@ export default function ModuleEditPage() {
 
   const handleSaveLesson = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!school) {
+      alert('Escola não identificada');
+      return;
+    }
 
     if (!lessonForm.title) {
       alert('Título é obrigatório');
@@ -95,7 +106,8 @@ export default function ModuleEditPage() {
         const { error } = await supabase
           .from('lesson')
           .update(lessonForm)
-          .eq('id', editingLessonId);
+          .eq('id', editingLessonId)
+          .eq('school_id', school.id); // Ensure scoping
 
         if (error) throw error;
       } else {
@@ -108,6 +120,7 @@ export default function ModuleEditPage() {
               module_id: moduleId,
               sort_order: lessons.length,
               status: 'draft',
+              school_id: school.id // Add school_id
             },
           ]);
 
@@ -136,12 +149,14 @@ export default function ModuleEditPage() {
 
   const handleDeleteLesson = async (lessonId: string) => {
     if (!confirm('Tem certeza que deseja deletar esta aula?')) return;
+    if (!school) return;
 
     try {
       const { error } = await supabase
         .from('lesson')
         .delete()
-        .eq('id', lessonId);
+        .eq('id', lessonId)
+        .eq('school_id', school.id); // Ensure scoping
 
       if (error) throw error;
       loadModule();
@@ -152,13 +167,15 @@ export default function ModuleEditPage() {
   };
 
   const handleToggleLessonStatus = async (lessonId: string, currentStatus: string) => {
+    if (!school) return;
     const newStatus = currentStatus === 'draft' ? 'published' : 'draft';
 
     try {
       const { error } = await supabase
         .from('lesson')
         .update({ status: newStatus })
-        .eq('id', lessonId);
+        .eq('id', lessonId)
+        .eq('school_id', school.id); // Ensure scoping
 
       if (error) throw error;
       loadModule();

@@ -56,6 +56,9 @@ Você encontra essas informações em:
 8. Crie uma nova query (ou adicione à anterior)
 9. Cole o conteúdo de `supabase/migrations/20260216222522_create_school_members_table.sql`
 10. Execute para criar a tabela `school_members`
+11. Crie uma nova query (ou adicione à anterior)
+12. Cole o conteúdo de `supabase/migrations/20260216224637_add_school_id_multi_tenant.sql`
+13. Execute para adicionar suporte multi-tenant e migrar dados existentes para a "Escola do Empreendedor Raiz"
 
 ### 5. Iniciar o servidor de desenvolvimento
 

@@ -4,26 +4,33 @@ import { useEffect, useState, use } from 'react';
 import { createClient } from '@/lib/supabase-client';
 import CourseForm from '../../course-form';
 
+import { useSchool } from '@/lib/school-context-provider';
+
 export default function EditCoursePage({ params }: { params: Promise<{ id: string }> }) {
     const supabase = createClient();
     const { id } = use(params);
+    const { school, loading: schoolLoading } = useSchool();
     const [course, setCourse] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const loadCourse = async () => {
+            if (!school) return;
             const { data } = await supabase
                 .from('course')
                 .select('*')
                 .eq('id', id)
+                .eq('school_id', school.id)
                 .single();
 
             if (data) setCourse(data);
             setLoading(false);
         };
 
-        loadCourse();
-    }, [id]);
+        if (!schoolLoading && school) {
+            loadCourse();
+        }
+    }, [id, school, schoolLoading]);
 
     if (loading) return (
         <div className="flex items-center justify-center min-h-[400px]">

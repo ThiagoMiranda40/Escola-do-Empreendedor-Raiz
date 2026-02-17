@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase-client';
 import { Button, Input, TextArea } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
+import { useSchool } from '@/lib/school-context-provider';
 
 interface Category {
   id: string;
@@ -14,6 +15,7 @@ interface Category {
 
 export default function CategoriesPage() {
   const supabase = createClient();
+  const { school, loading: schoolLoading } = useSchool();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -25,14 +27,18 @@ export default function CategoriesPage() {
   const { showToast } = useToast();
 
   useEffect(() => {
-    loadCategories();
-  }, []);
+    if (!schoolLoading && school) {
+      loadCategories();
+    }
+  }, [school, schoolLoading]);
 
   const loadCategories = async () => {
+    if (!school) return;
     try {
       const { data, error } = await supabase
         .from('category')
         .select('*')
+        .eq('school_id', school.id)
         .order('name', { ascending: true });
 
       if (error) throw error;
@@ -61,6 +67,10 @@ export default function CategoriesPage() {
       showToast('Nome é obrigatório', 'error');
       return;
     }
+    if (!school) {
+      showToast('Escola não identificada', 'error');
+      return;
+    }
 
     setIsSubmitting(true);
     const slug = formData.slug || generateSlug(formData.name);
@@ -74,7 +84,8 @@ export default function CategoriesPage() {
             slug,
             description: formData.description
           })
-          .eq('id', editingId);
+          .eq('id', editingId)
+          .eq('school_id', school.id); // Ensure scoping
 
         if (error) throw error;
         showToast('Categoria atualizada com sucesso!');
@@ -84,7 +95,8 @@ export default function CategoriesPage() {
           .insert([{
             name: formData.name,
             slug,
-            description: formData.description
+            description: formData.description,
+            school_id: school.id // Add school_id
           }]);
 
         if (error) throw error;
@@ -117,12 +129,14 @@ export default function CategoriesPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Tem certeza que deseja deletar esta categoria? Todos os cursos associados poderão ser afetados.')) return;
+    if (!school) return;
 
     try {
       const { error } = await supabase
         .from('category')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('school_id', school.id); // Ensure scoping
 
       if (error) throw error;
       showToast('Categoria excluída!');

@@ -16,10 +16,15 @@ interface CourseFormProps {
     isEditing?: boolean;
 }
 
+import { useSchool } from '@/lib/school-context-provider';
+
+// ... (keep existing imports)
+
 export default function CourseForm({ initialData, isEditing = false }: CourseFormProps) {
     const supabase = createClient();
     const router = useRouter();
     const { showToast } = useToast();
+    const { school, loading: schoolLoading } = useSchool(); // Use school context
     const [loading, setLoading] = useState(false);
     const [categories, setCategories] = useState<Category[]>([]);
     const [formData, setFormData] = useState({
@@ -34,11 +39,18 @@ export default function CourseForm({ initialData, isEditing = false }: CourseFor
     const [previewUrl, setPreviewUrl] = useState<string | null>(initialData?.thumb_url || null);
 
     useEffect(() => {
-        loadCategories();
-    }, []);
+        if (!schoolLoading && school) {
+            loadCategories();
+        }
+    }, [school, schoolLoading]);
 
     const loadCategories = async () => {
-        const { data } = await supabase.from('category').select('id, name').order('name');
+        if (!school) return;
+        const { data } = await supabase
+            .from('category')
+            .select('id, name')
+            .eq('school_id', school.id)
+            .order('name');
         if (data) setCategories(data);
     };
 
@@ -88,6 +100,10 @@ export default function CourseForm({ initialData, isEditing = false }: CourseFor
             showToast('Título e Categoria são obrigatórios', 'error');
             return;
         }
+        if (!school) {
+            showToast('Escola não identificada.', 'error');
+            return;
+        }
 
         setLoading(true);
         try {
@@ -111,6 +127,7 @@ export default function CourseForm({ initialData, isEditing = false }: CourseFor
                 status: formData.status,
                 thumb_url,
                 teacher_id: session.user.id,
+                school_id: school.id, // Add school_id
                 updated_at: new Date()
             };
 
@@ -118,7 +135,8 @@ export default function CourseForm({ initialData, isEditing = false }: CourseFor
                 const { error } = await supabase
                     .from('course')
                     .update(coursePayload)
-                    .eq('id', courseId);
+                    .eq('id', courseId)
+                    .eq('school_id', school.id); // Ensure scoping
                 if (error) throw error;
                 showToast('Curso atualizado com sucesso!');
             } else {

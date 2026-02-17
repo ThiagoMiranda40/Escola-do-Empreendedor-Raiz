@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
+import { useSchool } from '@/lib/school-context-provider';
 
 interface Stats {
   totalCourses: number;
@@ -13,6 +14,7 @@ interface Stats {
 
 export default function TeacherDashboard() {
   const supabase = createClient();
+  const { school, loading: schoolLoading } = useSchool();
   const [stats, setStats] = useState<Stats>({
     totalCourses: 0,
     publishedCourses: 0,
@@ -31,19 +33,21 @@ export default function TeacherDashboard() {
     const loadStats = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
+        if (!session || !school) return;
 
         // Total courses
         const { count: totalCount } = await supabase
           .from('course')
           .select('*', { count: 'exact', head: true })
-          .eq('teacher_id', session.user.id);
+          .eq('teacher_id', session.user.id)
+          .eq('school_id', school.id);
 
         // Published courses
         const { count: publishedCount } = await supabase
           .from('course')
           .select('*', { count: 'exact', head: true })
           .eq('teacher_id', session.user.id)
+          .eq('school_id', school.id)
           .eq('status', 'published');
 
         // Draft courses
@@ -51,6 +55,7 @@ export default function TeacherDashboard() {
           .from('course')
           .select('*', { count: 'exact', head: true })
           .eq('teacher_id', session.user.id)
+          .eq('school_id', school.id)
           .eq('status', 'draft');
 
         setStats({
@@ -66,10 +71,13 @@ export default function TeacherDashboard() {
       }
     };
 
-    loadStats();
-  }, []);
+    if (!schoolLoading) {
+      loadStats();
+    }
+  }, [school, schoolLoading]);
 
-  if (loading) {
+  if (loading || schoolLoading) {
+    // ... (keep existing loading spinner)
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="w-10 h-10 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
