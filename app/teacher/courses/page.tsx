@@ -3,9 +3,12 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
-import { Button, Input, Select, Badge } from '@/components/ui';
+import { Button, Input, Select } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
 import { useSchool } from '@/lib/school-context-provider';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { validateCoursePublication } from '@/lib/course-publishing';
+import { triggerSuccessConfetti } from '@/lib/confetti';
 
 interface Course {
     id: string;
@@ -16,14 +19,27 @@ interface Course {
     category: {
         name: string;
     };
+    module_count: number;
+    published_lesson_count: number;
 }
+
+const GET_READINESS = (course: Course) => {
+    if (course.status === 'published') return { label: 'Publicado', color: 'bg-emerald-500' };
+    if (course.module_count === 0) return { label: 'Sem conteúdo', color: 'bg-slate-700' };
+    if (course.published_lesson_count === 0) return { label: 'Incompleto', color: 'bg-amber-700' };
+    return { label: 'Pronto para publicar', color: 'bg-blue-600' };
+};
 
 export default function CoursesPage() {
     const supabase = createClient();
+    const searchParams = useSearchParams();
+    const router = useRouter();
     const { school, loading: schoolLoading } = useSchool();
+
     const [courses, setCourses] = useState<Course[]>([]);
     const [categories, setCategories] = useState<{ id: string, name: string }[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isProcessing, setIsProcessing] = useState<string | null>(null);
     const [search, setSearch] = useState('');
     const [filterCategory, setFilterCategory] = useState('all');
     const [filterStatus, setFilterStatus] = useState('all');
@@ -31,10 +47,15 @@ export default function CoursesPage() {
     const { showToast } = useToast();
 
     useEffect(() => {
+        const statusParam = searchParams.get('status');
+        if (statusParam && (statusParam === 'published' || statusParam === 'draft')) {
+            setFilterStatus(statusParam);
+        }
+
         if (!schoolLoading && school) {
             loadData();
         }
-    }, [school, schoolLoading]);
+    }, [school, schoolLoading, searchParams]);
 
     const loadData = async () => {
         try {
@@ -49,19 +70,31 @@ export default function CoursesPage() {
                 .order('name');
             setCategories(catData || []);
 
-            // Load Courses
+            // Load Courses with counts
+            // We use a trick to get counts: select the related items but only for counting
             const { data, error } = await supabase
                 .from('course')
                 .select(`
-          id, title, slug, thumb_url, status,
-          category ( name )
-        `)
+                    id, title, slug, thumb_url, status,
+                    category ( name ),
+                    module!course_id(count),
+                    lesson!course_id(count)
+                `)
                 .eq('teacher_id', session.user.id)
                 .eq('school_id', school.id)
+                .eq('lesson.status', 'published') // This filters the nested lesson count
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-            setCourses(data as any || []);
+
+            // Map and format results correctly
+            const formattedCourses = (data as any[] || []).map(course => ({
+                ...course,
+                module_count: course.module?.[0]?.count || 0,
+                published_lesson_count: course.lesson?.[0]?.count || 0
+            }));
+
+            setCourses(formattedCourses);
         } catch (error: any) {
             console.error('Erro ao carregar dados:', error);
             showToast('Erro ao carregar cursos', 'error');
@@ -71,14 +104,42 @@ export default function CoursesPage() {
     };
 
     const handleToggleStatus = async (courseId: string, currentStatus: string) => {
+        if (!school) return;
         const newStatus = currentStatus === 'draft' ? 'published' : 'draft';
+
+        // MVP validation: only if trying to PUBLISH
+        if (newStatus === 'published') {
+            setIsProcessing(courseId);
+            try {
+                const validation = await validateCoursePublication(supabase, courseId, school.id);
+                if (!validation.isValid) {
+                    showToast(
+                        `Para publicar, adicione ao menos 1 módulo e 1 aula publicada.\n\nFaltando: ${validation.errors.join(' ')}`,
+                        'error',
+                        {
+                            label: '✏️ Editar Curso',
+                            onClick: () => router.push(`/teacher/courses/${courseId}`)
+                        }
+                    );
+                    return;
+                }
+            } catch (err) {
+                showToast('Erro ao realizar validação técnica.', 'error');
+                return;
+            } finally {
+                setIsProcessing(null);
+            }
+        }
+
         try {
             const { error } = await supabase
                 .from('course')
                 .update({ status: newStatus })
-                .eq('id', courseId);
+                .eq('id', courseId)
+                .eq('school_id', school.id);
 
             if (error) throw error;
+            if (newStatus === 'published') triggerSuccessConfetti();
             showToast(`Curso ${newStatus === 'published' ? 'publicado' : 'movido para rascunho'}!`);
             loadData();
         } catch (error: any) {
@@ -177,53 +238,78 @@ export default function CoursesPage() {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-500">
-                    {filteredCourses.map((course) => (
-                        <div key={course.id} className="group bg-slate-900/40 border border-slate-800 rounded-[2rem] overflow-hidden hover:border-blue-500/50 transition-all hover:shadow-2xl hover:shadow-blue-500/10 flex flex-col">
-                            <div className="relative aspect-video bg-slate-800 overflow-hidden">
-                                {course.thumb_url ? (
-                                    <img src={course.thumb_url} alt={course.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-slate-600 font-bold text-lg italic">
-                                        Sem Imagem
+                    {filteredCourses.map((course) => {
+                        const readiness = GET_READINESS(course);
+                        const canPublish = readiness.label === 'Pronto para publicar';
+                        const isPublished = course.status === 'published';
+
+                        return (
+                            <div key={course.id} className="group bg-slate-900/40 border border-slate-800 rounded-[2rem] overflow-hidden hover:border-blue-500/50 transition-all hover:shadow-2xl hover:shadow-blue-500/10 flex flex-col">
+                                <div className="relative aspect-video bg-slate-800 overflow-hidden">
+                                    {course.thumb_url ? (
+                                        <img src={course.thumb_url} alt={course.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-slate-600 font-bold text-lg italic">
+                                            Sem Imagem
+                                        </div>
+                                    )}
+                                    {/* Readiness Badge */}
+                                    <div className="absolute top-4 left-4 flex flex-col gap-2">
+                                        <div className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg text-white border border-white/10 ${readiness.color}`}>
+                                            {readiness.label}
+                                        </div>
+                                        {isPublished && (
+                                            <div className="px-3 py-1.5 bg-slate-900/80 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-wider text-emerald-400 border border-emerald-500/30">
+                                                ✅ No Ar
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                                <div className="absolute top-4 left-4">
-                                    <Badge variant={course.status}>{course.status === 'published' ? 'Publicado' : 'Rascunho'}</Badge>
+                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-60"></div>
                                 </div>
-                                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent opacity-60"></div>
-                            </div>
 
-                            <div className="p-6 flex-1 flex flex-col">
-                                <div className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-2">{course.category?.name || 'Sem Categoria'}</div>
-                                <h3 className="text-xl font-bold text-white mb-4 line-clamp-2 leading-snug group-hover:text-blue-400 transition-colors">{course.title}</h3>
+                                <div className="p-6 flex-1 flex flex-col">
+                                    <div className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-2">
+                                        {course.category?.name || 'Sem Categoria'}
+                                        <span className="text-slate-600 mx-2">•</span>
+                                        <span className="text-slate-500">{course.module_count} Módulos</span>
+                                    </div>
+                                    <h3 className="text-xl font-bold text-white mb-4 line-clamp-2 leading-snug group-hover:text-blue-400 transition-colors">{course.title}</h3>
 
-                                <div className="mt-auto grid grid-cols-2 gap-2">
-                                    <Link href={`/teacher/courses/${course.id}`} className="block">
-                                        <Button variant="secondary" size="sm" className="w-full">Gerenciar</Button>
-                                    </Link>
-                                    <Link href={`/teacher/courses/${course.id}/edit`} className="block">
-                                        <Button variant="outline" size="sm" className="w-full">Editar</Button>
-                                    </Link>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleToggleStatus(course.id, course.status)}
-                                        className="col-span-1 bg-slate-800/50 hover:bg-slate-800 font-medium"
-                                    >
-                                        {course.status === 'published' ? '💿 Pausar' : '🚀 Publicar'}
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleDelete(course.id)}
-                                        className="col-span-1 bg-red-500/5 text-red-500 hover:bg-red-500 hover:text-white"
-                                    >
-                                        🗑️ Excluir
-                                    </Button>
+                                    <div className="mt-auto space-y-2">
+                                        <Link href={`/teacher/courses/${course.id}`} className="block">
+                                            <Button variant="secondary" size="md" className="w-full bg-slate-800 border-slate-700 rounded-xl font-bold hover:bg-blue-600 hover:text-white transition-all shadow-lg">
+                                                ✏️ Editar Curso
+                                            </Button>
+                                        </Link>
+
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <Link href={`/teacher/courses/${course.id}/edit`} className="block">
+                                                <Button variant="outline" size="sm" className="w-full border-slate-800 hover:bg-slate-800/50">✏️ Infos</Button>
+                                            </Link>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleToggleStatus(course.id, course.status)}
+                                                disabled={isProcessing === course.id || (!isPublished && !canPublish)}
+                                                className={`font-bold ${isPublished ? 'bg-amber-500/10 text-amber-500 hover:bg-amber-500 hover:text-white' : 'bg-slate-900/50 text-slate-500'}`}
+                                            >
+                                                {isProcessing === course.id ? '⌛...' : (isPublished ? '💿 Pausar' : '🚀 Publicar')}
+                                            </Button>
+                                        </div>
+
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleDelete(course.id)}
+                                            className="w-full text-xs text-slate-600 hover:text-red-500 hover:bg-red-500/5"
+                                        >
+                                            🗑️ Excluir Curso
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>

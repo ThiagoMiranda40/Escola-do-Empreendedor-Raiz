@@ -60,6 +60,38 @@ Você encontra essas informações em:
 12. Cole o conteúdo de `supabase/migrations/20260216224637_add_school_id_multi_tenant.sql`
 13. Execute para adicionar suporte multi-tenant e migrar dados existentes para a "Escola do Empreendedor Raiz"
 
+### 7. Gestão de Membros (Escolas)
+Para que um professor ou aluno acesse o conteúdo de uma escola específica, ele deve estar na tabela `school_members`.
+
+#### Como adicionar um Professor manualmente:
+1. Vá ao **SQL Editor** do Supabase.
+2. Execute o comando abaixo (substituindo pelo e-mail do usuário):
+```sql
+INSERT INTO school_members (school_id, user_id, role)
+SELECT 
+  (SELECT id FROM schools WHERE slug = 'escola-raiz'),
+  id, 
+  'TEACHER'
+FROM auth.users 
+WHERE email = 'professor@exemplo.com';
+```
+
+### 8. Como Testar Multi-tenancy (RLS)
+Para validar o isolamento de dados:
+1. Logue com um usuário que **NÃO** é membro da 'Escola A'.
+2. Tente acessar `/teacher/courses`. O resultado deve ser vazio (RLS bloqueia as linhas).
+
+### 9. Gerenciamento de Conteúdo (Módulos e Aulas)
+1. No Painel do Professor, clique em **"📚 Módulos"** no card do curso.
+2. Use **"＋ Adicionar Módulo"** para criar organizações.
+3. Use as setas (▲/▼) para reordenar módulos.
+4. Clique em **"📖 Gerenciar Aulas"** para entrar no nível de lições.
+5. Na tela de aulas:
+   - Use **"＋ Nova Aula"** para adicionar conteúdo.
+   - Configure o **Título**, **Descrição** e **Vídeo** (URL ou Embed).
+   - Use as setas (▲/▼) para reordenar a sequência dentro do módulo.
+   - Alterne entre **Pausar/Publicar** para controlar a visibilidade.
+
 ### 5. Iniciar o servidor de desenvolvimento
 
 ```bash

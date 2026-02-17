@@ -11,8 +11,9 @@ interface Lesson {
   title: string;
   description: string;
   panda_embed: string;
+  video_url: string;
   status: 'draft' | 'published';
-  sort_order: number;
+  order_index: number;
 }
 
 interface Module {
@@ -35,6 +36,7 @@ export default function ModuleEditPage() {
     title: '',
     description: '',
     panda_embed: '',
+    video_url: '',
   });
   const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
 
@@ -77,7 +79,7 @@ export default function ModuleEditPage() {
         .select('*')
         .eq('module_id', moduleId)
         .eq('school_id', school.id) // Ensure scoping
-        .order('sort_order');
+        .order('order_index');
 
       setLessons(lessonsData || []);
     } catch (error) {
@@ -118,7 +120,8 @@ export default function ModuleEditPage() {
             {
               ...lessonForm,
               module_id: moduleId,
-              sort_order: lessons.length,
+              course_id: module?.course_id, // Safely access
+              order_index: lessons.length,
               status: 'draft',
               school_id: school.id // Add school_id
             },
@@ -127,7 +130,7 @@ export default function ModuleEditPage() {
         if (error) throw error;
       }
 
-      setLessonForm({ title: '', description: '', panda_embed: '' });
+      setLessonForm({ title: '', description: '', panda_embed: '', video_url: '' });
       setEditingLessonId(null);
       setShowLessonForm(false);
       loadModule();
@@ -141,7 +144,8 @@ export default function ModuleEditPage() {
     setLessonForm({
       title: lesson.title,
       description: lesson.description,
-      panda_embed: lesson.panda_embed,
+      panda_embed: lesson.panda_embed || '',
+      video_url: lesson.video_url || '',
     });
     setEditingLessonId(lesson.id);
     setShowLessonForm(true);
@@ -186,7 +190,7 @@ export default function ModuleEditPage() {
   };
 
   const handleCancel = () => {
-    setLessonForm({ title: '', description: '', panda_embed: '' });
+    setLessonForm({ title: '', description: '', panda_embed: '', video_url: '' });
     setEditingLessonId(null);
     setShowLessonForm(false);
   };
@@ -276,6 +280,17 @@ export default function ModuleEditPage() {
                 </div>
 
                 <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-300 ml-1">URL do Vídeo (Opcional)</label>
+                  <input
+                    type="url"
+                    value={lessonForm.video_url}
+                    onChange={(e) => setLessonForm({ ...lessonForm, video_url: e.target.value })}
+                    className="w-full px-5 py-3 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white transition-all"
+                    placeholder="https://suaplataforma.com/video"
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-300 ml-1">Código de Embed (YouTube / Panda)</label>
                   <textarea
                     value={lessonForm.panda_embed}
@@ -317,7 +332,7 @@ export default function ModuleEditPage() {
                   <div className="flex justify-between items-start gap-4 mb-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-lg border border-slate-700 font-bold text-slate-300">
-                        {lesson.sort_order + 1}
+                        {lesson.order_index + 1}
                       </div>
                       <div>
                         <h3 className="text-lg font-bold text-white group-hover:text-blue-400 transition-colors line-clamp-1">{lesson.title}</h3>
@@ -328,12 +343,18 @@ export default function ModuleEditPage() {
                     </div>
                   </div>
 
-                  {lesson.panda_embed && (
+                  {(lesson.panda_embed || lesson.video_url) && (
                     <div className="aspect-video bg-slate-950 rounded-2xl overflow-hidden border border-slate-800/50 mb-4 group-hover:border-blue-500/20 transition-all relative">
-                      <div
-                        dangerouslySetInnerHTML={{ __html: lesson.panda_embed }}
-                        className="w-full h-full scale-[0.6] origin-center opacity-40 group-hover:opacity-100 group-hover:scale-100 transition-all duration-500 flex items-center justify-center pointer-events-none"
-                      />
+                      {lesson.panda_embed ? (
+                        <div
+                          dangerouslySetInnerHTML={{ __html: lesson.panda_embed }}
+                          className="w-full h-full scale-[0.6] origin-center opacity-40 group-hover:opacity-100 group-hover:scale-100 transition-all duration-500 flex items-center justify-center pointer-events-none"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-slate-600 italic text-xs">
+                          {lesson.video_url}
+                        </div>
+                      )}
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-950 to-transparent opacity-60"></div>
                       <span className="absolute bottom-3 left-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">🎥 Conteúdo em Vídeo</span>
                     </div>

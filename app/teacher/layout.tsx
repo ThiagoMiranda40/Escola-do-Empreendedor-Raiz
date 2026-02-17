@@ -224,10 +224,38 @@ export default function TeacherLayout({
               >
                 ☰
               </button>
-              <div className="hidden sm:block text-sm text-slate-400">
-                Campus Online / <span className="text-white font-medium capitalize">
-                  {pathname.split('/').pop()?.replace('-', ' ') || 'Dashboard'}
-                </span>
+              <div className="hidden sm:flex items-center gap-2 text-sm text-slate-400">
+                <Link href="/teacher/dashboard" className="hover:text-blue-400 transition-colors">Dashboard</Link>
+                {pathname.split('/').filter(Boolean).map((segment, index, array) => {
+                  if (segment === 'teacher' || (segment === 'dashboard' && index === 1)) return null;
+
+                  const url = `/${array.slice(0, index + 1).join('/')}`;
+                  const isLast = index === array.length - 1;
+
+                  // Translate and clean labels
+                  let label = segment.replace(/-/g, ' ');
+                  if (label.toLowerCase() === 'courses') label = 'Meus Cursos';
+                  if (label.toLowerCase() === 'categories') label = 'Categorias';
+                  if (label.toLowerCase() === 'edit') label = 'Editar';
+                  if (label.toLowerCase() === 'new') label = 'Novo';
+
+                  // If segment is a UUID, show "Gerenciar" or "Conteúdo" instead of the ID
+                  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(segment);
+                  if (isUUID) label = 'Gerenciar';
+
+                  return (
+                    <div key={url} className="flex items-center gap-2">
+                      <span className="text-slate-600">/</span>
+                      {isLast ? (
+                        <span className="text-white font-medium capitalize">{label}</span>
+                      ) : (
+                        <Link href={url} className="hover:text-blue-400 transition-colors capitalize">
+                          {label}
+                        </Link>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 

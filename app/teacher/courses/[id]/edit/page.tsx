@@ -46,12 +46,30 @@ export default function EditCoursePage({ params }: { params: Promise<{ id: strin
 
     return (
         <div className="space-y-8 pb-12">
+            <button
+                onClick={() => window.history.back()}
+                className="inline-flex items-center gap-2 text-slate-500 hover:text-blue-400 transition-colors group"
+            >
+                <span className="text-xl group-hover:-translate-x-1 transition-transform">←</span>
+                <span className="font-bold text-sm uppercase tracking-widest">Voltar</span>
+            </button>
+
             <div>
                 <h1 className="text-4xl font-extrabold text-white tracking-tight">Editar Curso</h1>
                 <p className="text-slate-400 mt-1">Atualize as informações do seu curso.</p>
             </div>
 
             <CourseForm initialData={course} isEditing={true} />
+
+            <div className="pt-8 mt-12 border-t border-slate-800/50 flex justify-center">
+                <button
+                    onClick={() => window.history.back()}
+                    className="inline-flex items-center gap-2 text-slate-500 hover:text-blue-400 transition-colors group"
+                >
+                    <span className="text-xl group-hover:-translate-x-1 transition-transform">←</span>
+                    <span className="font-bold text-sm uppercase tracking-widest">Voltar para Dashboard do Curso</span>
+                </button>
+            </div>
         </div>
     );
 }

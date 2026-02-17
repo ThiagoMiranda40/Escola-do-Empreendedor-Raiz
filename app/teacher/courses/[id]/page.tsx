@@ -2,13 +2,23 @@
 
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
 import { Button, Badge } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
 import { useSchool } from '@/lib/school-context-provider';
+import { createClient } from '@/lib/supabase-client';
+import CurriculumBuilder from './curriculum-builder';
+import { triggerSuccessConfetti } from '@/lib/confetti';
+
+const GET_READINESS = (course: any) => {
+    if (course.status === 'published') return { label: 'Publicado', color: 'bg-emerald-500' };
+    if (course.module_count === 0) return { label: 'Sem conteúdo', color: 'bg-slate-700' };
+    if (course.published_lesson_count === 0) return { label: 'Incompleto', color: 'bg-amber-700' };
+    return { label: 'Pronto para publicar', color: 'bg-blue-600' };
+};
 
 export default function ManageCoursePage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
+    const supabase = createClient();
     const { school, loading: schoolLoading } = useSchool();
     const [course, setCourse] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -26,28 +36,51 @@ export default function ManageCoursePage({ params }: { params: Promise<{ id: str
         const { data } = await supabase
             .from('course')
             .select(`
-        *,
-        category ( name )
-      `)
+                *,
+                category ( name ),
+                module!course_id(count),
+                lesson!course_id(count)
+            `)
             .eq('id', id)
             .eq('school_id', school.id)
+            .eq('lesson.status', 'published')
             .single();
 
-        if (data) setCourse(data);
+        if (data) {
+            setCourse({
+                ...data,
+                module_count: data.module?.[0]?.count || 0,
+                published_lesson_count: data.lesson?.[0]?.count || 0
+            });
+        }
         setLoading(false);
     };
 
     const handleToggleStatus = async () => {
-        if (!school) return;
+        if (!school || !course) return;
         const newStatus = course.status === 'draft' ? 'published' : 'draft';
+
+        if (newStatus === 'published') {
+            const readiness = GET_READINESS(course);
+            if (readiness.label !== 'Pronto para publicar') {
+                showToast(
+                    `Opa! Faltam requisitos para publicar:\n${readiness.label === 'Sem conteúdo' ? 'Adicione ao menos 1 módulo.' : 'Publique ao menos 1 aula.'}`,
+                    'error'
+                );
+                return;
+            }
+        }
+        // ... (existing toggle logic)
+
         try {
             const { error } = await supabase
                 .from('course')
                 .update({ status: newStatus })
                 .eq('id', id)
-                .eq('school_id', school.id); // Ensure scoping
+                .eq('school_id', school.id);
 
             if (error) throw error;
+            if (newStatus === 'published') triggerSuccessConfetti();
             showToast(`Curso ${newStatus === 'published' ? 'publicado' : 'movido para rascunho'}!`);
             loadCourse();
         } catch (error: any) {
@@ -71,7 +104,12 @@ export default function ManageCoursePage({ params }: { params: Promise<{ id: str
     );
 
     return (
-        <div className="space-y-8 pb-12">
+        <div className="space-y-6 pb-12">
+            <Link href="/teacher/courses" className="inline-flex items-center gap-2 text-slate-500 hover:text-blue-400 transition-colors group">
+                <span className="text-xl group-hover:-translate-x-1 transition-transform">←</span>
+                <span className="font-bold text-sm uppercase tracking-widest">Voltar para Meus Cursos</span>
+            </Link>
+
             {/* Course Header */}
             <div className="bg-slate-900/40 border border-slate-800 rounded-[2.5rem] p-8 md:p-12 relative overflow-hidden group shadow-2xl">
                 <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/5 blur-[100px] -mr-48 -mt-48 pointer-events-none group-hover:bg-blue-600/10 transition-colors"></div>
@@ -87,7 +125,9 @@ export default function ManageCoursePage({ params }: { params: Promise<{ id: str
 
                     <div className="flex-1 space-y-4">
                         <div className="flex flex-wrap items-center gap-3">
-                            <Badge variant={course.status}>{course.status === 'published' ? 'Publicado' : 'Rascunho'}</Badge>
+                            <div className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg text-white border border-white/10 ${GET_READINESS(course).color}`}>
+                                {GET_READINESS(course).label}
+                            </div>
                             <Badge variant="info">{course.category?.name}</Badge>
                         </div>
 
@@ -96,12 +136,22 @@ export default function ManageCoursePage({ params }: { params: Promise<{ id: str
                         <p className="text-slate-400 text-lg line-clamp-2 max-w-2xl">{course.description || 'Sem descrição cadastrada.'}</p>
 
                         <div className="flex flex-wrap gap-4 pt-4">
+                            <Button
+                                onClick={() => setActiveTab('curriculum')}
+                                className="rounded-2xl px-8"
+                            >
+                                📚 Gerenciar Aulas
+                            </Button>
+
                             <Link href={`/teacher/courses/${id}/edit`}>
-                                <Button className="rounded-2xl">✏️ Editar Informações</Button>
+                                <Button variant="secondary" className="rounded-2xl border-slate-700 bg-slate-800 font-bold">
+                                    ✏️ Editar Capa e Infos
+                                </Button>
                             </Link>
+
                             <Button
                                 variant="secondary"
-                                className="rounded-2xl border-slate-700 bg-slate-800"
+                                className="rounded-2xl border-slate-700 bg-slate-800/50"
                                 onClick={handleToggleStatus}
                             >
                                 {course.status === 'published' ? '💿 Pausar Curso' : '🚀 Publicar Agora'}
@@ -121,9 +171,9 @@ export default function ManageCoursePage({ params }: { params: Promise<{ id: str
 
                 {activeTab === 'overview' && (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                        <StatsMiniCard label="Total de Aulas" value="0" icon="📺" />
-                        <StatsMiniCard label="Minutos de Vídeo" value="0" icon="⏱️" />
-                        <StatsMiniCard label="Materiais" value="0" icon="📎" />
+                        <StatsMiniCard label="Total de Módulos" value={course.module_count.toString()} icon="📚" />
+                        <StatsMiniCard label="Aulas Publicadas" value={course.published_lesson_count.toString()} icon="📺" />
+                        <StatsMiniCard label="Status do Curso" value={course.status === 'published' ? 'No Ar' : 'Rascunho'} icon="🚀" />
 
                         <div className="md:col-span-3 bg-slate-900/30 border border-slate-800 p-8 rounded-[2rem]">
                             <h3 className="text-xl font-bold text-white mb-4">Sobre este curso</h3>
@@ -135,11 +185,8 @@ export default function ManageCoursePage({ params }: { params: Promise<{ id: str
                 )}
 
                 {activeTab === 'curriculum' && (
-                    <div className="bg-slate-900/30 border border-slate-800 p-12 rounded-[2rem] text-center animate-in fade-in slide-in-from-bottom-2 duration-500">
-                        <div className="text-5xl opacity-20 mb-4">🛠️</div>
-                        <h3 className="text-xl font-bold text-white mb-2">Editor de Currículo</h3>
-                        <p className="text-slate-400 max-w-md mx-auto mb-8">Em breve você poderá gerenciar módulos e aulas diretamente por aqui.</p>
-                        <Button variant="outline" disabled>Em breve</Button>
+                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        {school && <CurriculumBuilder courseId={id} schoolId={school.id} onUpdate={loadCourse} />}
                     </div>
                 )}
 
@@ -155,6 +202,13 @@ export default function ManageCoursePage({ params }: { params: Promise<{ id: str
                         </div>
                     </div>
                 )}
+            </div>
+
+            <div className="pt-8 mt-12 border-t border-slate-800/50 flex justify-center">
+                <Link href="/teacher/courses" className="inline-flex items-center gap-2 text-slate-500 hover:text-blue-400 transition-colors group">
+                    <span className="text-xl group-hover:-translate-x-1 transition-transform">←</span>
+                    <span className="font-bold text-sm uppercase tracking-widest">Voltar para Meus Cursos</span>
+                </Link>
             </div>
         </div>
     );

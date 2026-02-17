@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase-client';
 import { Button, Input, Select, TextArea } from '@/components/ui';
 import { useToast } from '@/components/ui/toast';
+import { validateCoursePublication } from '@/lib/course-publishing';
+import { triggerSuccessConfetti } from '@/lib/confetti';
 
 interface Category {
     id: string;
@@ -115,6 +117,25 @@ export default function CourseForm({ initialData, isEditing = false }: CourseFor
 
             const courseId = isEditing ? initialData.id : crypto.randomUUID();
 
+            // IMPORTANT: Validation if status is PUBLISHED
+            if (formData.status === 'published') {
+                if (!isEditing) {
+                    showToast('Um curso novo deve começar como Rascunho. Adicione módulos e aulas antes de publicar.', 'error');
+                    setLoading(false);
+                    return;
+                }
+
+                const validation = await validateCoursePublication(supabase, courseId, school.id);
+                if (!validation.isValid) {
+                    showToast(
+                        `Opa! Requisitos faltando para publicar:\n${validation.errors.join(' ')}`,
+                        'error'
+                    );
+                    setLoading(false);
+                    return;
+                }
+            }
+
             if (thumbFile) {
                 thumb_url = await uploadThumbnail(courseId);
             }
@@ -138,12 +159,14 @@ export default function CourseForm({ initialData, isEditing = false }: CourseFor
                     .eq('id', courseId)
                     .eq('school_id', school.id); // Ensure scoping
                 if (error) throw error;
+                if (formData.status === 'published') triggerSuccessConfetti();
                 showToast('Curso atualizado com sucesso!');
             } else {
                 const { error } = await supabase
                     .from('course')
                     .insert([{ ...coursePayload, id: courseId }]);
                 if (error) throw error;
+                if (formData.status === 'published') triggerSuccessConfetti();
                 showToast('Curso criado com sucesso!');
             }
 
@@ -255,11 +278,14 @@ export default function CourseForm({ initialData, isEditing = false }: CourseFor
                                 { value: 'draft', label: '📝 Rascunho' },
                                 { value: 'published', label: '🚀 Publicado' }
                             ]}
+                            disabled={!isEditing}
                         />
                         <p className="text-xs text-slate-500 italic">
-                            {formData.status === 'published'
-                                ? 'Este curso estará visível para todos os alunos na home.'
-                                : 'Apenas você pode ver este curso enquanto ele estiver em rascunho.'}
+                            {!isEditing
+                                ? 'Cursos novos começam como Rascunho. Você poderá publicar após adicionar módulos e aulas.'
+                                : formData.status === 'published'
+                                    ? 'Este curso está visível para os alunos.'
+                                    : 'Apenas você pode ver este curso enquanto ele estiver em rascunho.'}
                         </p>
                     </div>
 

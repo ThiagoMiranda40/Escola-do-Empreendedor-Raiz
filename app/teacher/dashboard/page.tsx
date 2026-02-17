@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
 import { useSchool } from '@/lib/school-context-provider';
+import { getDailyTip } from '@/lib/daily-tips';
 
 interface Stats {
   totalCourses: number;
@@ -111,6 +112,7 @@ export default function TeacherDashboard() {
           icon="📚"
           gradient="from-blue-600/20 to-indigo-600/20"
           border="border-blue-500/20"
+          href="/teacher/courses"
         />
         <StatCard
           label="Publicados"
@@ -118,6 +120,7 @@ export default function TeacherDashboard() {
           icon="🚀"
           gradient="from-emerald-600/20 to-teal-600/20"
           border="border-emerald-500/20"
+          href="/teacher/courses?status=published"
         />
         <StatCard
           label="Rascunhos"
@@ -125,6 +128,7 @@ export default function TeacherDashboard() {
           icon="📝"
           gradient="from-amber-600/20 to-orange-600/20"
           border="border-amber-500/20"
+          href="/teacher/courses?status=draft"
         />
         <StatCard
           label="Alunos Ativos"
@@ -132,6 +136,7 @@ export default function TeacherDashboard() {
           icon="👥"
           gradient="from-purple-600/20 to-pink-600/20"
           border="border-purple-500/20"
+          href="/teacher/courses" // For now, until we have a students page
         />
       </div>
 
@@ -165,13 +170,20 @@ export default function TeacherDashboard() {
           <h2 className="text-2xl font-bold text-white">Dica do Dia</h2>
           <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-3xl relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-3xl -mr-16 -mt-16 group-hover:bg-blue-500/20 transition-colors"></div>
-            <p className="text-slate-300 leading-relaxed italic relative z-10">
-              "Cursos com mais de 5 módulos e materiais complementares em PDF costumam ter 40% mais engajamento dos alunos."
-            </p>
-            <div className="mt-4 flex items-center gap-2 text-blue-400 text-sm font-bold relative z-10">
-              <span className="w-4 h-4">💡</span>
-              Sugestão de Performance
-            </div>
+            {(() => {
+              const tip = getDailyTip();
+              return (
+                <>
+                  <p className="text-slate-300 leading-relaxed italic relative z-10 text-lg">
+                    "{tip.text}"
+                  </p>
+                  <div className="mt-4 flex items-center gap-2 text-blue-400 text-sm font-bold relative z-10">
+                    <span className="w-5 h-5 flex items-center justify-center bg-blue-500/20 rounded-lg">{tip.icon}</span>
+                    Sugestão de {tip.category}
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -179,16 +191,24 @@ export default function TeacherDashboard() {
   );
 }
 
-function StatCard({ label, value, icon, gradient, border }: { label: string; value: number; icon: string; gradient: string; border: string }) {
+function StatCard({ label, value, icon, gradient, border, href }: { label: string; value: number; icon: string; gradient: string; border: string; href: string }) {
   return (
-    <div className={`bg-slate-950 border ${border} rounded-[2rem] p-8 relative overflow-hidden group hover:scale-[1.02] transition-all`}>
+    <Link
+      href={href}
+      className={`bg-slate-950 border ${border} rounded-[2rem] p-8 relative overflow-hidden group hover:scale-[1.02] active:scale-95 transition-all block cursor-pointer`}
+    >
       <div className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-50 group-hover:opacity-100 transition-opacity`}></div>
       <div className="relative z-10">
         <div className="text-3xl mb-4 grayscale group-hover:grayscale-0 transition-all">{icon}</div>
-        <div className="text-sm font-bold text-slate-400 uppercase tracking-widest">{label}</div>
+        <div className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-tight">{label}</div>
         <div className="text-5xl font-extrabold text-white mt-1 drop-shadow-2xl">{value}</div>
+
+        {/* Subtle "view more" indicator */}
+        <div className="mt-4 flex items-center gap-1 text-[10px] font-bold text-slate-500 group-hover:text-white transition-colors uppercase tracking-[0.2em]">
+          Ver Detalhes <span className="text-lg leading-none transform group-hover:translate-x-1 transition-transform">→</span>
+        </div>
       </div>
-    </div>
+    </Link>
   );
 }
 

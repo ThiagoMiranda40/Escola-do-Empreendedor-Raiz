@@ -8,14 +8,14 @@ import { supabase } from '@/lib/supabase';
 interface Module {
   id: string;
   title: string;
-  sort_order: number;
+  order_index: number;
   lessons: Lesson[];
 }
 
 interface Lesson {
   id: string;
   title: string;
-  sort_order: number;
+  order_index: number;
   status: string;
 }
 
@@ -58,7 +58,7 @@ export default function StudentCoursePage() {
         .from('module')
         .select('*')
         .eq('course_id', courseId)
-        .order('sort_order');
+        .order('order_index');
 
       // Carregar aulas para cada módulo
       if (modulesData) {
@@ -69,7 +69,7 @@ export default function StudentCoursePage() {
               .select('*')
               .eq('module_id', module.id)
               .eq('status', 'published')
-              .order('sort_order');
+              .order('order_index');
 
             return {
               ...module,
@@ -179,7 +179,7 @@ export default function StudentCoursePage() {
                           className="block p-4 bg-slate-700 rounded hover:bg-slate-600 transition text-white"
                         >
                           <p className="font-medium">{lesson.title}</p>
-                          <p className="text-xs text-slate-400 mt-1">Aula {lesson.sort_order + 1}</p>
+                          <p className="text-xs text-slate-400 mt-1">Aula {lesson.order_index + 1}</p>
                         </Link>
                       ))
                     )}

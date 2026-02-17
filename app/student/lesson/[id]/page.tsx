@@ -10,6 +10,7 @@ interface Lesson {
   title: string;
   description: string;
   panda_embed: string;
+  video_url: string;
   module_id: string;
 }
 
@@ -124,6 +125,14 @@ export default function StudentLessonPage() {
             <div
               dangerouslySetInnerHTML={{ __html: lesson.panda_embed }}
               className="w-full"
+            />
+          </div>
+        ) : lesson.video_url ? (
+          <div className="bg-slate-800 rounded-lg overflow-hidden mb-8 aspect-video">
+            <iframe
+              src={lesson.video_url}
+              className="w-full h-full"
+              allowFullScreen
             />
           </div>
         ) : (
