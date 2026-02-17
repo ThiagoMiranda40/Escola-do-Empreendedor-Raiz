@@ -5,8 +5,12 @@ import { createClient } from '@/lib/supabase-client';
 import Link from 'next/link';
 import { Input } from '@/components/ui';
 import BrandLogo from '@/components/BrandLogo';
+import { useParams } from 'next/navigation';
 
-export default function LoginPage() {
+export default function SchoolLoginPage() {
+    const params = useParams();
+    const schoolSlug = params.schoolSlug as string;
+
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -49,7 +53,11 @@ export default function LoginPage() {
                 <div className="flex flex-col items-center mb-10">
                     <BrandLogo size="md" className="mb-6" />
                     <h1 className="text-3xl font-extrabold text-white tracking-tight">Portal do Professor</h1>
-                    <p className="text-slate-400 mt-2">Gestão simplificada do seu Campus.</p>
+                    <div className="mt-3 px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full">
+                        <p className="text-blue-400 text-xs font-bold uppercase tracking-wide">
+                            Escola: {schoolSlug || 'Carregando...'}
+                        </p>
+                    </div>
                 </div>
 
                 <div className="bg-slate-900/40 border border-slate-800 p-8 rounded-[2rem] backdrop-blur-xl shadow-3xl">
@@ -99,7 +107,7 @@ export default function LoginPage() {
                         <p className="text-slate-500 text-sm">
                             Ainda não tem acesso?{' '}
                             <Link
-                                href="/signup-professor"
+                                href={`/s/${schoolSlug}/signup-professor`}
                                 className="text-white font-bold hover:text-blue-400 transition-colors underline underline-offset-4"
                             >
                                 Criar conta de gestão

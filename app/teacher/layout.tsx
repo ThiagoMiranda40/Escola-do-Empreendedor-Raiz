@@ -6,6 +6,29 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase-client';
 import BrandLogo from '@/components/BrandLogo';
 
+function NavItem({ href, icon, label, sidebarOpen, active }: { href: string; icon: string; label: string; sidebarOpen: boolean; active?: boolean }) {
+  return (
+    <Link
+      href={href}
+      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group relative ${active
+        ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+        : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+        }`}
+    >
+      <span className={`text-xl transition-all ${active ? '' : 'grayscale group-hover:grayscale-0'}`}>{icon}</span>
+      {sidebarOpen && <span className="font-bold text-sm">{label}</span>}
+      {!sidebarOpen && (
+        <div className="absolute left-16 bg-slate-900 border border-slate-700 text-white text-xs px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-2xl whitespace-nowrap z-50">
+          {label}
+        </div>
+      )}
+      {active && sidebarOpen && (
+        <div className="absolute right-2 w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
+      )}
+    </Link>
+  );
+}
+
 export default function TeacherLayout({
   children,
 }: {
@@ -23,12 +46,10 @@ export default function TeacherLayout({
     const checkAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-
         if (!session) {
           router.push('/login');
           return;
         }
-
         const { data: profile } = await supabase
           .from('users_profile')
           .select('role, name')
@@ -39,7 +60,6 @@ export default function TeacherLayout({
           router.push('/');
           return;
         }
-
         setUserProfile({
           name: profile?.name || 'Professor',
           email: session.user.email || ''
@@ -91,18 +111,22 @@ export default function TeacherLayout({
     <div className="flex h-screen bg-[#020617] text-slate-100 selection:bg-blue-500/30 overflow-hidden">
       {/* Desktop Sidebar */}
       <aside
-        className={`hidden md:flex ${sidebarOpen ? 'w-64' : 'w-20'
-          } border-r border-slate-800/50 bg-[#020617] transition-all duration-300 flex-col z-30 shadow-2xl`}
+        className={`hidden md:flex ${sidebarOpen ? 'w-64' : 'w-20'} 
+        border-r border-slate-800/50 bg-[#020617] transition-all duration-300 flex-col z-30 shadow-2xl relative`}
       >
-        <div className="p-6 border-b border-slate-800/50 flex items-center h-[73px]">
+        <div className={`h-24 flex items-center border-b border-slate-800/50 ${sidebarOpen ? 'justify-start pl-4' : 'justify-center px-2'}`}>
           {sidebarOpen ? (
-            <BrandLogo size="md" />
+            <div className="transform scale-[0.65] origin-left">
+              <BrandLogo variant="png" size="md" />
+            </div>
           ) : (
-            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white mx-auto shadow-lg shadow-blue-500/20">C</div>
+            <div className="transform scale-75">
+              <BrandLogo variant="vertical" size="sm" />
+            </div>
           )}
         </div>
 
-        <nav className="flex-1 p-4 space-y-2 mt-4">
+        <nav className="flex-1 p-3 space-y-1 mt-2 overflow-y-auto custom-scrollbar">
           {menuItems.map((item) => (
             <NavItem
               key={item.href}
@@ -110,18 +134,21 @@ export default function TeacherLayout({
               icon={item.icon}
               label={item.label}
               sidebarOpen={sidebarOpen}
-              active={pathname === item.href}
+              active={pathname === item.href || pathname.startsWith(item.href)}
             />
           ))}
         </nav>
 
-        <div className="p-4 border-t border-slate-800/50 space-y-3">
+        <div className="p-4 border-t border-slate-800/50">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="w-full flex items-center justify-center p-2 rounded-lg hover:bg-slate-800 transition-colors text-slate-400"
+            className="w-full flex items-center justify-center gap-3 p-2 rounded-xl hover:bg-slate-800/50 transition-colors text-slate-400 hover:text-white group"
             title={sidebarOpen ? 'Recolher menu' : 'Expandir menu'}
           >
-            {sidebarOpen ? '← Recolher' : '→'}
+            <span className={`transform transition-transform duration-300 ${sidebarOpen ? 'rotate-180' : ''}`}>
+              ➔
+            </span>
+            {sidebarOpen && <span className="text-sm font-medium whitespace-nowrap">Recolher menu lateral</span>}
           </button>
         </div>
       </aside>
@@ -139,11 +166,13 @@ export default function TeacherLayout({
         className={`fixed top-0 bottom-0 left-0 w-72 bg-[#020617] border-r border-slate-800 z-50 transition-transform duration-300 md:hidden ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
       >
-        <div className="p-6 border-b border-slate-800 flex items-center justify-between h-[73px]">
-          <BrandLogo size="md" />
+        <div className="h-24 px-6 border-b border-slate-800 flex items-center justify-between">
+          <div className="transform scale-75 origin-left">
+            <BrandLogo size="md" />
+          </div>
           <button
             onClick={() => setIsMobileMenuOpen(false)}
-            className="text-slate-400 hover:text-white"
+            className="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800/50"
           >
             ✕
           </button>
@@ -191,7 +220,7 @@ export default function TeacherLayout({
               ☰
             </button>
             <div className="hidden sm:block text-sm text-slate-400">
-              Painel do / <span className="text-white font-medium capitalize">
+              Campus Online / <span className="text-white font-medium capitalize">
                 {pathname.split('/').pop()?.replace('-', ' ') || 'Dashboard'}
               </span>
             </div>
@@ -227,28 +256,5 @@ export default function TeacherLayout({
         </main>
       </div>
     </div>
-  );
-}
-
-function NavItem({ href, icon, label, sidebarOpen, active }: { href: string; icon: string; label: string; sidebarOpen: boolean; active?: boolean }) {
-  return (
-    <Link
-      href={href}
-      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group relative ${active
-        ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-        : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-        }`}
-    >
-      <span className={`text-xl transition-all ${active ? '' : 'grayscale group-hover:grayscale-0'}`}>{icon}</span>
-      {sidebarOpen && <span className="font-bold text-sm">{label}</span>}
-      {!sidebarOpen && (
-        <div className="absolute left-16 bg-slate-900 border border-slate-700 text-white text-xs px-2.5 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-2xl whitespace-nowrap z-50">
-          {label}
-        </div>
-      )}
-      {active && sidebarOpen && (
-        <div className="absolute right-2 w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
-      )}
-    </Link>
   );
 }

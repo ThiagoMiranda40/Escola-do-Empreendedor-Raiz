@@ -77,7 +77,7 @@ export default function SignupProfessorPage() {
 
       <div className="w-full max-w-lg animate-in fade-in zoom-in-95 duration-700 relative z-10">
         <div className="flex flex-col items-center mb-10 text-center">
-          <BrandLogo size="lg" className="mb-6 scale-125" />
+          <BrandLogo size="md" className="mb-6" />
           <h1 className="text-3xl font-extrabold text-white tracking-tight">Comece sua Jornada</h1>
           <p className="text-slate-400 mt-2">Crie sua conta de instrutor no Campus Online.</p>
         </div>

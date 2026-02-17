@@ -4,7 +4,7 @@ import { ToastProvider } from '@/components/ui/toast';
 
 export const metadata: Metadata = {
   title: 'Campus Online',
-  description: 'Plataforma de escolas digitais — cursos, aulas e área de membros.',
+  description: 'Plataforma de Escolas Digitais - cursos, aulas e área de membros.',
 };
 
 export default function RootLayout({
@@ -14,7 +14,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <body className="antialiased">
+      <body className="antialiased bg-[#020617] text-white">
         <ToastProvider>
           {children}
         </ToastProvider>

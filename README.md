@@ -50,6 +50,12 @@ Você encontra essas informações em:
 2. Crie uma nova query
 3. Cole o conteúdo de `supabase/schema.sql`
 4. Execute
+5. Crie uma nova query (ou adicione à anterior)
+6. Cole o conteúdo de `supabase/migrations/20260216221833_create_schools_table.sql`
+7. Execute para criar a tabela `schools` e a "Escola do Empreendedor Raiz"
+8. Crie uma nova query (ou adicione à anterior)
+9. Cole o conteúdo de `supabase/migrations/20260216222522_create_school_members_table.sql`
+10. Execute para criar a tabela `school_members`
 
 ### 5. Iniciar o servidor de desenvolvimento
 
