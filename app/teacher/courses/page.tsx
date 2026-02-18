@@ -21,6 +21,8 @@ interface Course {
     };
     module_count: number;
     published_lesson_count: number;
+    access_model: 'OPEN' | 'ENTITLEMENT_REQUIRED';
+    course_tier: string;
 }
 
 const GET_READINESS = (course: Course) => {
@@ -30,11 +32,22 @@ const GET_READINESS = (course: Course) => {
     return { label: 'Pronto para publicar', color: 'bg-blue-600' };
 };
 
+const GET_TIER_LABEL = (tier: string) => {
+    const labels: Record<string, string> = {
+        'TIER_1': 'Base',
+        'TIER_2': 'Pro',
+        'TIER_3': 'Certificação',
+        'TIER_4': 'Formação',
+        'TIER_5': 'Pós-graduação'
+    };
+    return labels[tier] || tier;
+};
+
 export default function CoursesPage() {
     const supabase = createClient();
     const searchParams = useSearchParams();
     const router = useRouter();
-    const { school, loading: schoolLoading } = useSchool();
+    const { school, userRole, loading: schoolLoading } = useSchool();
 
     const [courses, setCourses] = useState<Course[]>([]);
     const [categories, setCategories] = useState<{ id: string, name: string }[]>([]);
@@ -52,10 +65,10 @@ export default function CoursesPage() {
             setFilterStatus(statusParam);
         }
 
-        if (!schoolLoading && school) {
+        if (!schoolLoading && school && userRole) {
             loadData();
         }
-    }, [school, schoolLoading, searchParams]);
+    }, [school, schoolLoading, userRole, searchParams]);
 
     const loadData = async () => {
         try {
@@ -71,19 +84,24 @@ export default function CoursesPage() {
             setCategories(catData || []);
 
             // Load Courses with counts
-            // We use a trick to get counts: select the related items but only for counting
-            const { data, error } = await supabase
+            let query = supabase
                 .from('course')
                 .select(`
-                    id, title, slug, thumb_url, status,
+                    id, title, slug, thumb_url, status, access_model, course_tier, required_entitlement_key,
                     category ( name ),
                     module!course_id(count),
                     lesson!course_id(count)
                 `)
-                .eq('teacher_id', session.user.id)
                 .eq('school_id', school.id)
                 .eq('lesson.status', 'published') // This filters the nested lesson count
                 .order('created_at', { ascending: false });
+
+            // If not ADMIN, only see own courses
+            if (userRole !== 'ADMIN') {
+                query = query.eq('teacher_id', session.user.id);
+            }
+
+            const { data, error } = await query;
 
             if (error) throw error;
 
@@ -91,7 +109,8 @@ export default function CoursesPage() {
             const formattedCourses = (data as any[] || []).map(course => ({
                 ...course,
                 module_count: course.module?.[0]?.count || 0,
-                published_lesson_count: course.lesson?.[0]?.count || 0
+                published_lesson_count: course.lesson?.[0]?.count || 0,
+                required_entitlement_key: (course as any).required_entitlement_key // Added to formatted object
             }));
 
             setCourses(formattedCourses);
@@ -253,14 +272,26 @@ export default function CoursesPage() {
                                             Sem Imagem
                                         </div>
                                     )}
-                                    {/* Readiness Badge */}
-                                    <div className="absolute top-4 left-4 flex flex-col gap-2">
-                                        <div className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg text-white border border-white/10 ${readiness.color}`}>
+                                    {/* Status Badge: Top-Left (Minimalist) */}
+                                    <div className="absolute top-3 left-3 z-20">
+                                        <div className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider shadow-xl text-white border border-white/10 ${readiness.color}`}>
                                             {readiness.label}
                                         </div>
-                                        {isPublished && (
-                                            <div className="px-3 py-1.5 bg-slate-900/80 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-wider text-emerald-400 border border-emerald-500/30">
-                                                ✅ No Ar
+                                    </div>
+
+                                    {/* Business Badges: Top-Right (Compact) */}
+                                    <div className="absolute top-3 right-3 z-20 flex flex-col items-end gap-1.5">
+                                        <div className="px-2 py-1 bg-slate-950/60 backdrop-blur-md rounded-lg text-[8px] font-black uppercase tracking-widest text-blue-400 border border-blue-500/20">
+                                            🏆 {GET_TIER_LABEL(course.course_tier)}
+                                        </div>
+                                        {(course as any).required_entitlement_key?.startsWith('COURSE:') && (
+                                            <div className="px-2 py-1 bg-slate-950/60 backdrop-blur-md rounded-lg text-[8px] font-black uppercase tracking-widest text-purple-400 border border-purple-500/20">
+                                                🎯 Avulso
+                                            </div>
+                                        )}
+                                        {course.access_model === 'OPEN' && (
+                                            <div className="px-2 py-1 bg-slate-950/60 backdrop-blur-md rounded-lg text-[8px] font-black uppercase tracking-widest text-emerald-400 border border-emerald-500/20">
+                                                🔓 Grátis
                                             </div>
                                         )}
                                     </div>
@@ -283,8 +314,8 @@ export default function CoursesPage() {
                                         </Link>
 
                                         <div className="grid grid-cols-2 gap-2">
-                                            <Link href={`/teacher/courses/${course.id}/edit`} className="block">
-                                                <Button variant="outline" size="sm" className="w-full border-slate-800 hover:bg-slate-800/50">✏️ Infos</Button>
+                                            <Link href={`/teacher/courses/${course.id}?tab=settings`} className="block">
+                                                <Button variant="outline" size="sm" className="w-full border-slate-800 hover:bg-slate-800/50">⚙️ Configurações</Button>
                                             </Link>
                                             <Button
                                                 variant="ghost"

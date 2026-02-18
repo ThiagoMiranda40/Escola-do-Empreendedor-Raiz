@@ -11,42 +11,43 @@ interface School {
 
 interface SchoolContextType {
     school: School | null;
+    userRole: 'ADMIN' | 'TEACHER' | 'STUDENT' | null;
     loading: boolean;
 }
 
 const SchoolContext = createContext<SchoolContextType>({
     school: null,
+    userRole: null,
     loading: true,
 });
 
 export function SchoolProvider({ children }: { children: React.ReactNode }) {
     const [school, setSchool] = useState<School | null>(null);
+    const [userRole, setUserRole] = useState<'ADMIN' | 'TEACHER' | 'STUDENT' | null>(null);
     const [loading, setLoading] = useState(true);
     const supabase = createClient();
 
     useEffect(() => {
         const fetchSchool = async () => {
             try {
-                // 1. Try to get school from user membership first (more secure/reliable for logged users)
                 const { data: { session } } = await supabase.auth.getSession();
 
                 if (session) {
                     const { data: memberData } = await supabase
                         .from('school_members')
-                        .select('school_id, schools(id, slug, name)')
+                        .select('role, school_id, schools(id, slug, name)')
                         .eq('user_id', session.user.id)
                         .single();
 
                     if (memberData?.schools) {
                         setSchool(memberData.schools as any);
+                        setUserRole(memberData.role as any);
                         setLoading(false);
                         return;
                     }
                 }
 
-                // 2. Fallback: Try to get from URL (if public or not logged in yet) - not implemented here as this is mostly for teacher layout
-                // or default to 'escola-raiz' for backward compatibility during migration
-                // We'll just default to 'escola-raiz' if nothing else found for now, or handle as error
+                // Fallback
                 const { data: defaultSchool } = await supabase
                     .from('schools')
                     .select('id, slug, name')
@@ -68,7 +69,7 @@ export function SchoolProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     return (
-        <SchoolContext.Provider value={{ school, loading }}>
+        <SchoolContext.Provider value={{ school, userRole, loading }}>
             {children}
         </SchoolContext.Provider>
     );

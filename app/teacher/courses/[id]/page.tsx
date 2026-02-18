@@ -7,7 +7,9 @@ import { useToast } from '@/components/ui/toast';
 import { useSchool } from '@/lib/school-context-provider';
 import { createClient } from '@/lib/supabase-client';
 import CurriculumBuilder from './curriculum-builder';
+import CourseForm from '../course-form';
 import { triggerSuccessConfetti } from '@/lib/confetti';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 const GET_READINESS = (course: any) => {
     if (course.status === 'published') return { label: 'Publicado', color: 'bg-emerald-500' };
@@ -19,11 +21,20 @@ const GET_READINESS = (course: any) => {
 export default function ManageCoursePage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
     const supabase = createClient();
+    const router = useRouter();
     const { school, loading: schoolLoading } = useSchool();
     const [course, setCourse] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('overview');
     const { showToast } = useToast();
+    const searchParams = useSearchParams();
+
+    useEffect(() => {
+        const tab = searchParams.get('tab');
+        if (tab && ['overview', 'curriculum', 'settings'].includes(tab)) {
+            setActiveTab(tab);
+        }
+    }, [searchParams]);
 
     useEffect(() => {
         if (!schoolLoading && school) {
@@ -125,7 +136,7 @@ export default function ManageCoursePage({ params }: { params: Promise<{ id: str
 
                     <div className="flex-1 space-y-4">
                         <div className="flex flex-wrap items-center gap-3">
-                            <div className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg text-white border border-white/10 ${GET_READINESS(course).color}`}>
+                            <div className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider shadow-lg text-white border border-white/10 ${GET_READINESS(course).color}`}>
                                 {GET_READINESS(course).label}
                             </div>
                             <Badge variant="info">{course.category?.name}</Badge>
@@ -142,12 +153,6 @@ export default function ManageCoursePage({ params }: { params: Promise<{ id: str
                             >
                                 📚 Gerenciar Aulas
                             </Button>
-
-                            <Link href={`/teacher/courses/${id}/edit`}>
-                                <Button variant="secondary" className="rounded-2xl border-slate-700 bg-slate-800 font-bold">
-                                    ✏️ Editar Capa e Infos
-                                </Button>
-                            </Link>
 
                             <Button
                                 variant="secondary"
@@ -191,14 +196,48 @@ export default function ManageCoursePage({ params }: { params: Promise<{ id: str
                 )}
 
                 {activeTab === 'settings' && (
-                    <div className="bg-slate-900/30 border border-slate-800 p-8 rounded-[2rem] space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                        <h3 className="text-xl font-bold text-white">Configurações Avançadas</h3>
-                        <div className="p-6 bg-red-500/5 border border-red-500/20 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-6">
-                            <div>
-                                <p className="font-bold text-red-500 text-lg">Zona de Perigo</p>
-                                <p className="text-slate-400 text-sm">Excluir este curso removerá permanentemente todas as suas aulas e dados associados.</p>
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                        <CourseForm
+                            initialData={course}
+                            isEditing={true}
+                            onSuccess={() => {
+                                loadCourse();
+                                setActiveTab('overview');
+                            }}
+                        />
+
+                        <div className="bg-slate-900/30 border border-slate-800 p-8 rounded-[2rem] space-y-6">
+                            <h3 className="text-xl font-bold text-white">Configurações Avançadas</h3>
+                            <div className="p-6 bg-red-500/5 border border-red-500/20 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-6">
+                                <div>
+                                    <p className="font-bold text-red-500 text-lg">Zona de Perigo</p>
+                                    <p className="text-slate-400 text-sm">Excluir este curso removerá permanentemente todas as suas aulas e dados associados.</p>
+                                </div>
+                                <Button
+                                    variant="danger"
+                                    className="shrink-0"
+                                    onClick={async () => {
+                                        if (confirm('Tem certeza que deseja excluir este curso permanentemente? Esta ação não pode ser desfeita.')) {
+                                            try {
+                                                const { error } = await supabase
+                                                    .from('course')
+                                                    .delete()
+                                                    .eq('id', id)
+                                                    .eq('school_id', school?.id);
+
+                                                if (error) throw error;
+
+                                                showToast('Curso excluído com sucesso');
+                                                router.push('/teacher/courses');
+                                            } catch (err: any) {
+                                                showToast(err.message, 'error');
+                                            }
+                                        }
+                                    }}
+                                >
+                                    Excluir Curso
+                                </Button>
                             </div>
-                            <Button variant="danger" className="shrink-0">Excluir Curso</Button>
                         </div>
                     </div>
                 )}
